@@ -11,15 +11,18 @@ import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/Confir
  */
 contract BasedCoffee is ConfirmedOwner {
     error BC__CoffeePurchaseFailed();
+    error BC__InvalidFunctionParams();
 
     AggregatorV3Interface ethPriceFeed;
+    AggregatorV3Interface erc20PriceFeed;
+    address public immutable i_ethFeedAddress;
     uint256 public constant ADDITIONAL_PRECISION = 1e8;
 
     mapping(address => mapping(address => uint256))
         public supporterToSUppportedAddress;
 
     constructor(address ethFeedAddress) ConfirmedOwner(msg.sender) {
-        ethPriceFeed = AggregatorV3Interface(ethFeedAddress);
+        i_ethFeedAddress = ethFeedAddress;
     }
 
     /**
@@ -27,11 +30,13 @@ contract BasedCoffee is ConfirmedOwner {
      * @param _supportedAddress address we wanna tip the ETH
      * @param _usdValue USD value we wanna tip
      */
-    function buyACoffee(
+    function buyACoffeeWithEth(
         address _supportedAddress,
         uint256 _usdValue
     ) public onlyOwner {
-        uint256 ethInWeiWorthUsd = getEthInWorth4USD(_usdValue);
+        if (_supportedAddress == address(0) || _usdValue == 0)
+            revert BC__InvalidFunctionParams();
+        uint256 ethInWeiWorthUsd = getEthWorthUsdValue(_usdValue);
         (bool succ, bytes memory data) = _supportedAddress.call{
             value: ethInWeiWorthUsd * 1 ether
         }("");
@@ -42,9 +47,9 @@ contract BasedCoffee is ConfirmedOwner {
      * @notice Returns the ETH value worth the USD we need to tip
      * @param _usdValue USD value  you need to tip
      */
-    function getEthInWorth4USD(
-        uint256 _usdValue
-    ) internal view returns (uint256) {
+    function getEthWorthUsdValue(uint256 _usdValue) internal returns (uint256) {
+        ethPriceFeed = AggregatorV3Interface(i_ethFeedAddress);
+
         (, int256 _price, , , ) = ethPriceFeed.latestRoundData();
         uint256 ethPrice = uint256(_price);
 

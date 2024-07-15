@@ -1,0 +1,7 @@
+.
+└── given buyACoffeeWithEthTest
+    └── when Is Owner the caller
+        ├── it should revert the function call if caller is not the owner
+        └── when either _usdValue or supportedAddress is invalid
+            ├── it must revert the function call if either of them are invalid
+            └── it would tip ETH equivalent of the usdValue provided
